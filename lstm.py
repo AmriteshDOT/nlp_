@@ -1,4 +1,3 @@
-# lstm_qwk.py
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.preprocessing.text import Tokenizer
@@ -17,7 +16,7 @@ from sklearn.metrics import cohen_kappa_score
 from scipy.optimize import minimize
 
 
-def thresholds(preds, y_true, initial=[1.5, 2.5, 3.5, 4.5, 5.5], method="Powell"):
+def thresholds(preds, y_true, initial=[1.5, 2.5, 3.5, 4.5], method="Powell"):
     preds = np.asarray(preds)
     y_true = np.asarray(y_true)
 
