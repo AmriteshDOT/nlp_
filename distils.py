@@ -58,7 +58,7 @@ def fit_transformer_cv(
     ds = ds.map(tok_fn, batched=True)
     ds = ds.remove_columns([text_col])
     ds = ds.rename_column(label_col, "labels")
-    ds.set_format(type="torch", columns=["input_ids", "attention_mask", "labels"])
+    ds.set_format(columns=["input_ids", "attention_mask", "labels"])
     base_nm = model_name.split("/")[-1]
     n = len(ds)
     oof_preds = []
@@ -147,7 +147,6 @@ def predict_test_set_simple(texts_test, fold_dirs, model_name, max_len=128):
         padding="max_length",
         truncation=True,
         max_length=max_len,
-        return_tensors="pt",
     )
 
     for fold_dir in fold_dirs:
