@@ -136,7 +136,7 @@ def example_run(df):
     joblib.dump(final_th, "net_threshold.joblib")
 
 
-def predict_test_set_simple(texts_test, fold_dirs, model_name, max_len=128):
+def predict_test_set_simple(texts_test, fold_dirs, model_name, max_len=512):
 
     final_threshold = joblib.load("net_threshold.joblib")
     all_fold_preds = []
