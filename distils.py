@@ -12,6 +12,7 @@ from transformers import (
 )
 from scipy.optimize import minimize
 import joblib
+import torch
 
 
 def thresholds(preds, y_true, initial=[1.5, 2.5, 3.5, 4.5], method="Powell"):
@@ -45,7 +46,7 @@ def fit_transformer_cv(
     batch_size=2,
     epochs=5,
     lr=2e-5,
-    out_dir="./models",
+    out_dir="./models/{model_name}",
 ):
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     ds = Dataset.from_pandas(df[[text_col, label_col]].reset_index(drop=True))
@@ -75,7 +76,7 @@ def fit_transformer_cv(
         model = AutoModelForSequenceClassification.from_pretrained(
             model_name, num_labels=1, problem_type="regression"
         )
-        run_dir = os.path.join(out_dir, f"{base_nm}_f{fold}")
+        run_dir = os.path.join(out_dir, f"_{fold}")
         os.makedirs(run_dir, exist_ok=True)
 
         args = TrainingArguments(
@@ -84,11 +85,11 @@ def fit_transformer_cv(
             per_device_eval_batch_size=batch_size,
             learning_rate=lr,
             num_train_epochs=epochs,
-            save_strategy="epoch",
+            save_strategy="no",
             evaluation_strategy="epoch",
-            load_best_model_at_end=True,
+            load_best_model_at_end=False,
             metric_for_best_model="eval_mae",
-            save_total_limit=2,
+            logging_strategy="epoch",
         )
 
         trainer = Trainer(
@@ -108,7 +109,8 @@ def fit_transformer_cv(
         qwks.append(qwk)
         oof_preds.append(predictions)
         oof_labels.append(np.array(val_ds["labels"]))
-        trainer.save_model(run_dir)
+
+        torch.save(model.state_dict(), os.path.join(run_dir, "weights.pth"))
         saved_dirs.append(run_dir)
 
     mae = mean_absolute_error(oof_labels, oof_preds)
@@ -116,7 +118,6 @@ def fit_transformer_cv(
     th_array = np.array(thres)
     med_th = np.median(th_array, axis=0)
     joblib.dump(med_th, f"medianthres_oof_{base_nm}.joblib")
-    # print(f"{mae} {mse}")
     return oof_preds, oof_labels, saved_dirs
 
 
@@ -136,7 +137,7 @@ def example_run(df):
     joblib.dump(final_th, "net_threshold.joblib")
 
 
-def predict_test_set_simple(texts_test, fold_dirs, model_name, max_len=512):
+def predict(texts_test, model_base_dir, model_name, max_len=512):
 
     final_threshold = joblib.load("net_threshold.joblib")
     all_fold_preds = []
@@ -147,15 +148,26 @@ def predict_test_set_simple(texts_test, fold_dirs, model_name, max_len=512):
         padding="max_length",
         truncation=True,
         max_length=max_len,
+        return_tensors="pt",
     )
 
+    fold_dirs = sorted(
+        [
+            os.path.join(model_base_dir, d)
+            for d in os.listdir(model_base_dir)
+            if os.path.isdir(os.path.join(model_base_dir, d))
+        ]
+    )
     for fold_dir in fold_dirs:
+        
+        weights_path = os.path.join(fold_dir, "weights.pth")
         model = AutoModelForSequenceClassification.from_pretrained(
-            fold_dir, num_labels=1, problem_type="regression"
+            model_name, num_labels=1, problem_type="regression"
         )
+        model.load_state_dict(torch.load(weights_path, map_location="cpu"))
         model.eval()
-
-        preds = model(**inputs).logits.numpy()
+        with torch.no_grad():
+            preds = model(**inputs).logits.cpu().numpy()
         all_fold_preds.append(preds)
 
     ensemble_preds = np.mean(all_fold_preds, axis=0)

@@ -135,24 +135,34 @@ llm = ChatGoogleGenerativeAI(
 
 from langchain_core.output_parsers import StrOutputParser
 import random
+import distils
+
 parser = StrOutputParser()
 
 def format_docs(docs):
     return "\n\n---\n\n".join([doc.page_content for doc in docs])
 
-def retrieve_better(user_essay):
-    predicted =random.randint(1,5)
-    print(f"Predicted score (dummy): {predicted}")
+def retrieve_better(user_essay, vectorstore, base_dir="./model", max_len=512):
+    
+    import distils
+    model_names = ["distilbert-base-uncased", "distilroberta-base"]
+    predictions = []
+
+    for model_name in model_names:
+        pred = distils.predict(user_essay, base_dir, model_name, max_len)
+        predictions.append(pred)
+
+    predicted_score = int(round(sum(predictions) / len(predictions)))
+    print(f"Ensemble predicted score: {predicted_score}")
 
     dynamic_retriever = vectorstore.as_retriever(
         search_kwargs={
             "k": 3,
-            "filter": {"score": {"$gt": predicted}}
+            "filter": {"score": {"$gt": predicted_score}}
         }
     )
     docs = dynamic_retriever.invoke(user_essay)
     return format_docs(docs)
-
 
 essay_chain = (
     {
@@ -163,11 +173,12 @@ essay_chain = (
     | llm
     | parser
 )
+######################   MAIN   ###########################
 
 user_input = {
-    "user_essay": """
-WHEN IS A PLAINTIFF ENTITLED TO RECOVER? A. A plaintiff who was injured as as result of some negligent conduct on the part of a defendant is entitled to recover compensation for such injury from that defendant.A plaintiff is entitled to a verdict if jury finds1. That a defendant was negligent, and2. That such negligence was a cause of injury to the plaintiff. Q. WHAT IS NEGLIGENCE? Negligence is the doing of something which a reasonably prudent person would not do, or the failure to do something
-"""
+#     "user_essay": """
+# # WHEN IS A PLAINTIFF ENTITLED TO RECOVER? A. A plaintiff who was injured as as result of some negligent conduct on the part of a defendant is entitled to recover compensation for such injury from that defendant.A plaintiff is entitled to a verdict if jury finds1. That a defendant was negligent, and2. That such negligence was a cause of injury to the plaintiff. Q. WHAT IS NEGLIGENCE? Negligence is the doing of something which a reasonably prudent person would not do, or the failure to do something
+# """
 }
 
 result = essay_chain.invoke(user_input)
