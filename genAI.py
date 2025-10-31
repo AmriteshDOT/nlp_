@@ -9,7 +9,7 @@ Original file is located at
 
 import pandas as pd
 df=pd.read_csv("/content/train.csv")
-df=df.head(50)
+# df=df.head(50)
 df.columns
 
 from langchain_core.documents import Document
@@ -67,14 +67,13 @@ vectorstore = Chroma(
 from langchain_core.prompts import ChatPromptTemplate
 
 prompt = ChatPromptTemplate.from_messages([
-    # System message: sets context and rules
+
     ("system",
      """You are an expert writing tutor helping students improve their essays.
 Your goal is to analyze the student's essay, compare it with high-scoring examples,
 and give detailed, actionable feedback based on writing principles and the 5W–1H rule.
 Use an encouraging and professional tone."""),
 
-    # User message: contains essay + retrieved essays + instructions
     ("user",
      """The user has written the following essay:
 
