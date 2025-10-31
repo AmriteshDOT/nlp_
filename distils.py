@@ -40,10 +40,10 @@ def fit_transformer_cv(
     text_col="full_text",
     label_col="grade",
     model_name="distilbert-base-uncased",
-    max_len=128,
+    max_len=512,
     n_splits=3,
-    batch_size=4,
-    epochs=2,
+    batch_size=2,
+    epochs=5,
     lr=2e-5,
     out_dir="./models",
 ):
