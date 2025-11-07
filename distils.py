@@ -44,7 +44,7 @@ def fit_transformer_cv(
     max_len=512,
     n_splits=3,
     batch_size=2,
-    epochs=5,
+    epochs=50,
     lr=2e-5,
     out_dir="./models/{model_name}",
 ):
