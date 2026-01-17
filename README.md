@@ -8,7 +8,7 @@ End-to-end pipeline that adapts DistilBERT to essay text (continued MLM pretrain
 
 - Continue masked-language (MLM) pretraining of DistilBERT on domain essays to adapt the model to essay-style language.
 - Fine-tune a regression head on top of DistilBERT to predict essay scores (score → grade mapping).
-- Build a GenAI retrieval-augmented-generation (RAG) pipeline using LangChain + Chroma + Gemini embeddings to fetch high-scoring essays and generate contextual, personalized writing feedback.
+- Architected a stateful, agentic RAG workflow using LangGraph and Gemini 2.5 Flash that employs ChromaDB with dynamic metadata filtering to retrieve high-scoring exemplars and generates iterative, 5W1H-structured feedback via a Self-Correction (Coach-Critic) loop.
 ## Components & Flow
 
 - **Preprocessing**: normalize text, replace newlines with [BR], split train/val and write plain text for MLM.
