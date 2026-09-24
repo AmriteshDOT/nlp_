@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+data/
+artifacts/
+
+venv/
+env/
+*.py[cod]
+.env
+*.token
