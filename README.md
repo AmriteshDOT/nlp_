@@ -1,19 +1,23 @@
 
 # Automated Essay Scoring & Feedback
 
-End-to-end pipeline that adapts DistilBERT to essay text (continued MLM pretraining → fine-tuned regression) and a GenAI RAG layer that retrieves high-scoring essays to generate personalized feedback. Validation QWK = 0.79.
+End-to-end pipeline coupling a domain-adapted DistilBERT regressor with Nelder-Mead threshold optimization (0.76 QWK), layered with a self-correcting LangGraph RAG agent that uses hybrid search to retrieve grade-specific rubrics and exemplars for targeted feedback.
 
 
 ## What the project does ?
 
-- Continue masked-language (MLM) pretraining of DistilBERT on domain essays to adapt the model to essay-style language.
-- Fine-tune a regression head on top of DistilBERT to predict essay scores (score → grade mapping).
-- Architected a stateful, agentic RAG workflow using LangGraph and Gemini 2.5 Flash that employs ChromaDB with dynamic metadata filtering to retrieve high-scoring exemplars and generates iterative, 5W1H-structured feedback via a Self-Correction (Coach-Critic) loop.
+- Continues Masked Language Modeling (MLM) on DistilBERT after expanding the tokenizer with domain-specific Out-of-Vocabulary (OOV) tokens to adapt to essay-style language.
+- Replaces standard classification with a continuous regression head, employing a gradient-free Nelder-Mead optimizer to learn non-uniform ordinal rounding thresholds that directly maximize Quadratic Weighted Kappa.
+- Architected a stateful, agentic RAG workflow using LangGraph that manages a multi-node workflow including automated Scoring, Hybrid Retrieval, and an Actor-Critic reflection loop for iterative feedback refinement.
+- Enforces output quality by dynamically querying a triple-asset ChromaDB knowledge base (K_anchor, K_rubric, K_source) to ground generation in actual grading rubrics and factual baselines, mitigating LLM hallucinations.
 ## Components & Flow
 
-- **Preprocessing**: normalize text, replace newlines with [BR], split train/val and write plain text for MLM.
-- **MLM (continued pretraining)**: distilbert (AutoModelForMaskedLM) on domain essays; save checkpoint + tokenizer.
-- **Regressor (fine-tune)**: attach a linear head to DistilBERT, train with MSE/AdamW, evaluate with QWK (0.79 val).
-- **RAG layer**: Agentic RAG Architecture: Orchestrated via LangGraph, utilizing a StateGraph to manage a multi-node workflow including automated Diagnosis, Score-Aware Retrieval, and a Coach-Critic reflection loop for iterative feedback refinement.
-- **Intelligent Retrieval & Generation**: Features dynamic metadata filtering in ChromaDB to fetch high-scoring exemplars relative to user performance, paired with Gemini 2.5 Flash for comparative analysis based on the 5W1H framework.
-- **Tech Stack**: Developed using LangChain, LangGraph, and Pydantic for structured validation, powered by Qwen3-0.6B embeddings and Google Generative AI models.
+- **MLM (Continued Pretraining)**: Extracts top domain tokens, expands the DistilBERT vocabulary, and adapts the model via a freeze-and-thaw pretraining schedule.
+
+- **Regressor (Fine-tune)**: Attaches a nn.Linear(768, 1) head, trains with MSE/AdamW, and discretizes raw float predictions via Nelder-Mead boundaries (0.76 val QWK).
+
+- **Hybrid RAG Layer**: Combines dense HNSW vector search (Sentence Transformers) with sparse lexical search (BM25) via Reciprocal Rank Fusion (RRF) to retrieve the most contextually relevant rubrics and exemplar essays.
+
+- **Self-Correcting Agent**: A LangGraph StateGraph routes the essay through a Scorer → Retriever → Critic → Evaluator loop. The Evaluator node strictly audits the Critic's feedback for formatting and rubric adherence, forcing revisions if criteria are not met.
+
+- **Tech Stack**: Developed using PyTorch, SciPy (Optimization), LangGraph, LangChain, ChromaDB, Rank-BM25, and Hugging Face Serverless Inference APIs (Mistral-7B-Instruct & all-MiniLM-L6-v2).
